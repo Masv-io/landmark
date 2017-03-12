@@ -1,5 +1,8 @@
-let fetchLandmarks = function(location){
+function getDistance(spot1, spot2){
+  return Math.sqrt(Math.pow(spot1.geometry.location.lat-spot2[0], 2) + Math.pow(spot1.geometry.location.lng-spot2[1], 2));
+}
 
+function fetchType(type, loc, callback){
   const API_KEY1= 'AIzaSyDjy2x4r2qKGLUVpZelY6HRwngXkXywOQg'
   const API_KEY2 = 'AIzaSyDlfrEmPrLZ-wcx6_xn0Rh3lsLRPK9oGCQ';
   const API_KEY =  'AIzaSyDFpYbqt2v_O4_qN6bMCGAJfA2k4Z68xQY';
@@ -9,6 +12,16 @@ let fetchLandmarks = function(location){
 
   const gp = new GooglePlaces(API_KEY, GOOGLE_PLACES_OUTPUT_FORMAT);
 
+  let parameters = {
+    location: loc,
+    rankby: 'distance',
+    type: type
+  };
+
+  return gp.nearBySearch(parameters, callback);
+}
+
+let fetchLandmarks = function(location){
   let clientLocation = location ? location : [37.800344, -122.438906];
 
   let searchFor = [
@@ -18,29 +31,24 @@ let fetchLandmarks = function(location){
     'synagogue', 'university','zoo'
   ]
 
-  let parameters = {
-    location: clientLocation,
-    rankby: 'distance',
-  };
-
   let landmark = {};
 
-  return Promise.all(searchFor.map(t => {
-    parameters.type = t;
+  return Promise.all(searchFor.map(type => {
     return new Promise((resolve, reject) => {
-      gp.nearBySearch(parameters, function(error, response){
+      fetchType(type, clientLocation, function(error, response){
         if(response.results[0] ) {
-          resolve(response.results[0])
+          resolve(response.results[0]);
         } else {
-          resolve(error)
+          resolve(null);
         }
-      });
+      })
     })
   })).then(allLandmarks => {
-
     let minDistance = 10000000000;
     allLandmarks.map(place => {
-      if(place && Math.sqrt(Math.pow(place.geometry.location.lat-clientLocation[0], 2) + Math.pow(place.geometry.location.lng-clientLocation[1], 2))<=minDistance){
+      if(place){
+        let distanceToPlace = getDistance(place, clientLocation);
+        minDistance = distanceToPlace;
         landmark = place;
       }
     })
